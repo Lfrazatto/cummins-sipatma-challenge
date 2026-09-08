@@ -19,3 +19,7 @@ The game now records real analytics in MySQL/TiDB: `game_visits` stores visitor 
 The Admin page no longer uses the former hard-coded demo password. It requires an authenticated user with `role = admin`, and shows unique visitors, sessions, completed games, average accuracy, total points, recent participants, sector performance, and a privacy note.
 
 The visual system now uses the Cummins red accent alongside safety cyan and includes an Osasco laboratory photo at `/manus-storage/cummins-osasco-lab_3f8bd7f1.jpg`, with an on-page attribution link to the AutoIndústria source. The photo should only remain in public production if the organization has the appropriate usage authorization.
+
+## 2026-09-08 ranking fix
+
+Fixed the public leaderboard query. The previous implementation ordered by the select alias `score`, which Drizzle emitted as `ORDER BY score` and caused a MySQL error in the deployed runtime. It now orders by the full aggregate expression `COALESCE(SUM(game_sessions.score), 0) DESC`. TypeScript, tests, production build, preview reload, server logs, and the equivalent live SQL query were validated successfully.

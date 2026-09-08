@@ -180,5 +180,5 @@ export async function getPublicLeaderboard() {
     sector: gameSessions.sector,
     score: sql<number>`coalesce(sum(${gameSessions.score}), 0)`,
     level: sql<string>`max(${gameSessions.difficulty})`,
-  }).from(gameSessions).where(eq(gameSessions.status, "completed")).groupBy(gameSessions.playerName, gameSessions.sector).orderBy(desc(sql`score`)).limit(50);
+  }).from(gameSessions).where(eq(gameSessions.status, "completed")).groupBy(gameSessions.playerName, gameSessions.sector).orderBy(desc(sql<number>`coalesce(sum(${gameSessions.score}), 0)`)).limit(50);
 }

@@ -77,9 +77,9 @@ const accent = {
 };
 
 const difficultyMeta: Record<Difficulty, { points: number; seconds: number; color: string; className: string }> = {
-  Fácil: { points: 100, seconds: 60, color: accent.green, className: "easy" },
-  Médio: { points: 200, seconds: 45, color: accent.yellow, className: "medium" },
-  Difícil: { points: 400, seconds: 30, color: "#ff6b6b", className: "hard" },
+  Fácil: { points: 100, seconds: 120, color: accent.green, className: "easy" },
+  Médio: { points: 200, seconds: 90, color: accent.yellow, className: "medium" },
+  Difícil: { points: 400, seconds: 60, color: "#ff6b6b", className: "hard" },
 };
 
 const initialLeaders: Leader[] = [

@@ -23,3 +23,7 @@ The visual system now uses the Cummins red accent alongside safety cyan and incl
 ## 2026-09-08 ranking fix
 
 Fixed the public leaderboard query. The previous implementation ordered by the select alias `score`, which Drizzle emitted as `ORDER BY score` and caused a MySQL error in the deployed runtime. It now orders by the full aggregate expression `COALESCE(SUM(game_sessions.score), 0) DESC`. TypeScript, tests, production build, preview reload, server logs, and the equivalent live SQL query were validated successfully.
+
+## 2026-09-08 timer update
+
+Doubled the available challenge time: Fácil 120 seconds, Médio 90 seconds, Difícil 60 seconds. This applies to quiz and timed visual missions through the shared `difficultyMeta` configuration; points and completion logic remain unchanged.

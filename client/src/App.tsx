@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,6 +34,9 @@ import {
   Zap,
 } from "lucide-react";
 import "./index.css";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { startLogin } from "@/const";
 
 type Page = "home" | "play" | "ranking" | "learn" | "achievements" | "profile" | "admin" | "setup";
 type Difficulty = "Fácil" | "Médio" | "Difícil";
@@ -151,6 +154,16 @@ function formatNumber(value: number) {
 }
 
 function App() {
+  const analytics = trpc.analytics;
+  const visitorKeyRef = useRef<string>("");
+  const sessionKeyRef = useRef<string | null>(null);
+  const recordVisit = analytics.recordVisit.useMutation();
+  const startSessionMutation = analytics.startSession.useMutation();
+  const recordAnswerMutation = analytics.recordAnswer.useMutation();
+  const completeSessionMutation = analytics.completeSession.useMutation();
+  const publicStats = analytics.publicStats.useQuery();
+  const publicLeaderboard = analytics.publicLeaderboard.useQuery();
+  const auth = useAuth();
   const [page, setPage] = useState<Page>("home");
   const [player, setPlayer] = useState<Player>(() => {
     try {
@@ -185,12 +198,19 @@ function App() {
   const [foundErrors, setFoundErrors] = useState<string[]>([]);
   const [kanbanCards, setKanbanCards] = useState({ todo: ["Kit de vedação", "Inspeção final", "Ordem 2048"], doing: ["Setup prensa"], done: ["Lote 2047"] });
   const [selectedKanban, setSelectedKanban] = useState<string | null>(null);
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState("");
 
   useEffect(() => { localStorage.setItem("sipatma-player", JSON.stringify(player)); }, [player]);
   useEffect(() => { localStorage.setItem("sipatma-leaders", JSON.stringify(leaders)); }, [leaders]);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sipatma-visitor-key") || crypto.randomUUID();
+      localStorage.setItem("sipatma-visitor-key", saved);
+      visitorKeyRef.current = saved;
+      recordVisit.mutate({ visitorKey: saved, userAgent: navigator.userAgent, referrer: document.referrer || undefined, path: window.location.pathname });
+    } catch {
+      // Analytics must never block the public game when browser storage is unavailable.
+    }
+  }, []);
 
   const currentQuestion = gameQuestions[questionIndex];
   const playerRank = useMemo(() => {
@@ -203,10 +223,13 @@ function App() {
     if (player.name !== "Visitante") scores[player.sector] = (scores[player.sector] || 0) + player.totalScore;
     return Object.entries(scores).sort((a, b) => b[1] - a[1]);
   }, [leaders, player]);
+  const displayedLeaders = useMemo<Leader[]>(() => publicLeaderboard.data?.length ? publicLeaderboard.data.map((leader) => ({ name: leader.name, sector: leader.sector, score: Number(leader.score), level: leader.level as Difficulty })) : leaders, [publicLeaderboard.data, leaders]);
 
   const go = (next: Page) => { setPage(next); setSidebarOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  const startChallenge = (challenge: ChallengeKey) => {
+  const startChallenge = (challenge: ChallengeKey, playerForRound: Player = player) => {
+    const sessionKey = crypto.randomUUID();
+    sessionKeyRef.current = sessionKey;
     setActiveChallenge(challenge);
     setResult(null);
     setSelectedAnswer(null);
@@ -224,14 +247,17 @@ function App() {
     setGameSeed((seed) => seed + 1);
     setStartedAt(Date.now());
     if (challenge === "errors") {
-      setTimeLeft(difficultyMeta[player.difficulty].seconds);
+      setTimeLeft(difficultyMeta[playerForRound.difficulty].seconds);
+      startSessionMutation.mutate({ sessionKey, playerName: playerForRound.name, sector: playerForRound.sector, difficulty: playerForRound.difficulty, challenge, totalQuestions: 6 });
       go("play");
       return;
     }
     const category = challenge === "quiz" ? undefined : challenge === "fiveS" ? "5S" : challenge === "lean" ? "Lean Manufacturing" : challenge === "kaizen" ? "Kaizen" : challenge === "kanban" ? "Kanban" : challenge === "safety" ? "Segurança" : "Meio ambiente";
-    const pool = questionBank.filter((item) => item.difficulty === player.difficulty && (!category || item.category === category || (challenge === "quiz" && item.mode === "safety")));
-    setGameQuestions(shuffle(pool.length >= 8 ? pool : questionBank.filter((item) => item.difficulty === player.difficulty)).slice(0, 8));
-    setTimeLeft(difficultyMeta[player.difficulty].seconds);
+    const pool = questionBank.filter((item) => item.difficulty === playerForRound.difficulty && (!category || item.category === category || (challenge === "quiz" && (item.mode === "safety" || item.mode === "environment"))));
+    const questions = shuffle(pool.length >= 8 ? pool : questionBank.filter((item) => item.difficulty === playerForRound.difficulty)).slice(0, 8);
+    setGameQuestions(questions);
+    setTimeLeft(difficultyMeta[playerForRound.difficulty].seconds);
+    startSessionMutation.mutate({ sessionKey, playerName: playerForRound.name, sector: playerForRound.sector, difficulty: playerForRound.difficulty, challenge, totalQuestions: questions.length });
     go("play");
   };
 
@@ -269,6 +295,9 @@ function App() {
     const rank = nextLeaders.findIndex((leader) => leader.name === nextPlayer.name) + 1;
     const nextAbove = nextLeaders[rank - 2];
     setResult({ score: finalScore, correct, total, bestStreak: best, time: elapsed, rank, gap: nextAbove ? Math.max(0, nextAbove.score - nextPlayer.totalScore) : 0 });
+    if (sessionKeyRef.current) {
+      completeSessionMutation.mutate({ sessionKey: sessionKeyRef.current, score: finalScore, correctAnswers: correct, incorrectAnswers: Math.max(0, total - correct), totalQuestions: total });
+    }
   };
 
   const submitAnswer = (index: number) => {
@@ -285,6 +314,9 @@ function App() {
     setRoundCorrect((value) => value + (isCorrect ? 1 : 0));
     setRoundErrors((value) => value + (isCorrect ? 0 : 1));
     setLives((value) => Math.max(0, value - (isCorrect ? 0 : 1)));
+    if (sessionKeyRef.current) {
+      recordAnswerMutation.mutate({ sessionKey: sessionKeyRef.current, questionId: currentQuestion.id, selectedAnswer: index, correct: isCorrect, points: earned, challenge: activeChallenge });
+    }
   };
 
   const nextQuestion = () => {
@@ -353,21 +385,21 @@ function App() {
       {sidebarOpen && <div className="mobile-nav"><div className="mobile-nav-title">MENU PRINCIPAL</div><button onClick={() => go("home")}>Início <small>Visão geral</small></button><button onClick={() => go(player.name === "Visitante" ? "setup" : "play")}>Jogar agora <small>Escolher uma missão</small></button><button onClick={() => go("ranking")}>Ranking <small>Acompanhar resultados</small></button><button onClick={() => go("learn")}>Aprender <small>Conteúdos SIPATMA</small></button><button onClick={() => go("profile")}>Meu perfil <small>Seu progresso</small></button></div>}
 
       <main>
-        {page === "home" && <HomePage player={player} go={go} startChallenge={startChallenge} />}
+        {page === "home" && <HomePage player={player} go={go} startChallenge={startChallenge} stats={publicStats.data} />}
         {page === "setup" && <SetupPage player={player} setPlayer={setPlayer} startChallenge={startChallenge} go={go} />}
         {page === "play" && <PlayPage player={player} activeChallenge={activeChallenge} startChallenge={startChallenge} gameQuestions={gameQuestions} currentQuestion={currentQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} feedback={feedback} submitAnswer={submitAnswer} nextQuestion={nextQuestion} score={score} streak={streak} lives={lives} timeLeft={timeLeft} result={result} foundErrors={foundErrors} chooseError={chooseError} kanbanCards={kanbanCards} selectedKanban={selectedKanban} setSelectedKanban={setSelectedKanban} moveKanban={moveKanban} go={go} />}
-        {page === "ranking" && <RankingPage leaders={leaders} player={player} sectorScores={sectorScores} />}
+        {page === "ranking" && <RankingPage leaders={displayedLeaders} player={player} sectorScores={sectorScores} />}
         {page === "learn" && <LearnPage />}
         {page === "achievements" && <AchievementsPage player={player} />}
         {page === "profile" && <ProfilePage player={player} rank={playerRank} go={go} />}
-        {page === "admin" && <AdminPage unlocked={adminUnlocked} password={adminPassword} setPassword={setAdminPassword} error={adminError} unlock={() => { if (adminPassword === "CUMMINS2026") { setAdminUnlocked(true); setAdminError(""); } else setAdminError("Senha de demonstração incorreta."); }} resetDemo={resetDemo} player={player} leaders={leaders} />}
+        {page === "admin" && <AdminPage resetDemo={resetDemo} player={player} leaders={leaders} user={auth.user} authLoading={auth.loading} isAuthenticated={auth.isAuthenticated} />}
       </main>
       <footer className="footer"><span>© Cummins • Programa SIPATMA</span><span><button onClick={() => go("achievements")}>Conquistas</button><button onClick={() => go("admin")}>Admin</button></span></footer>
     </div>
   );
 }
 
-function HomePage({ player, go, startChallenge }: { player: Player; go: (page: Page) => void; startChallenge: (challenge: ChallengeKey) => void }) {
+function HomePage({ player, go, startChallenge, stats }: { player: Player; go: (page: Page) => void; startChallenge: (challenge: ChallengeKey) => void; stats?: { uniqueVisitors: number; completedSessions: number; averageAccuracy: number } }) {
   return <div className="page home-page">
     <section className="hero-grid">
       <div className="hero-copy">
@@ -375,13 +407,14 @@ function HomePage({ player, go, startChallenge }: { player: Player; go: (page: P
         <h1>Aprenda.<br /><span>Jogue.</span><br />Melhore.</h1>
         <p className="hero-lede">Uma experiência prática para aprender segurança, cuidado e responsabilidade na SIPATMA.</p>
         <div className="hero-actions"><button className="primary-button" onClick={() => go(player.name === "Visitante" ? "setup" : "play")}><Play size={17} fill="currentColor" /> COMEÇAR DESAFIO <ArrowRight size={17} /></button><button className="text-button" onClick={() => go("learn")}>Como funciona <ChevronRight size={15} /></button></div>
-        <div className="hero-proof"><div className="proof-avatars"><span>CR</span><span>RS</span><span>BL</span><span>+2k</span></div><p><strong>2.438 colaboradores</strong><br /><span>já estão no jogo</span></p></div>
+        <div className="hero-proof"><div className="proof-avatars"><span>CM</span><span>OS</span><span>SP</span><span>+</span></div><p><strong>{formatNumber(Number(stats?.uniqueVisitors || 0))} visitantes</strong><br /><span>acessos reais registrados</span></p></div>
       </div>
       <div className="hero-visual">
         <div className="visual-frame"><img src="/manus-storage/sipatma-reference_87b500c7.png" alt="Ilustração de uma linha de produção com segurança e Lean" /><div className="visual-tag tag-score"><span className="pulse-dot" /> PONTUAÇÃO <strong>12.450</strong></div><div className="visual-tag tag-safety"><ShieldCheck size={15} /> SAFETY FIRST</div><div className="visual-corner" /></div>
-        <div className="hero-stats"><div><span>+48%</span><small>adesão no último ciclo</small></div><div><span>04</span><small>caminhos de cuidado</small></div><div><span>16</span><small>perguntas SIPATMA</small></div></div>
+        <div className="hero-stats"><div><span>{stats ? `${Math.round(Number(stats.averageAccuracy || 0))}%` : "—"}</span><small>precisão média real</small></div><div><span>{formatNumber(Number(stats?.completedSessions || 0))}</span><small>partidas concluídas</small></div><div><span>16</span><small>perguntas SIPATMA</small></div></div>
       </div>
     </section>
+    <section className="osasco-feature"><div className="osasco-photo"><img src="/manus-storage/cummins-osasco-lab_3f8bd7f1.jpg" alt="Laboratório de ensaios mecânicos na unidade Cummins de Osasco" /><span>OSASCO • SP</span></div><div className="osasco-copy"><div className="eyebrow"><span className="eyebrow-dot" /> CUMMINS BRASIL</div><h2>Segurança também é <span>inovação.</span></h2><p>Conecte as atitudes do dia a dia ao cuidado com as pessoas, a qualidade do processo e a confiabilidade que movem a Cummins.</p><small>Imagem pública de referência: AutoIndústria, “Cummins reforça capacidades de laboratório em Osasco”. <a href="https://www.autoindustria.com.br/2025/02/20/cummins-reforca-capacidades-de-laboratorio-em-osasco/" target="_blank" rel="noreferrer">Ver fonte</a>. Use a imagem apenas conforme a autorização aplicável.</small></div></section>
     <section className="section-block featured-block"><div className="section-heading"><div><div className="eyebrow">CENTRAL DE MISSÕES</div><h2>Escolha como quer aprender</h2></div><button className="text-button" onClick={() => go("play")}>Ver todos <ArrowRight size={15} /></button></div><div className="challenge-grid">{challengeCards.slice(0, 4).map((card) => <ChallengeCard key={card.key} card={card} onClick={() => startChallenge(card.key)} />)}</div></section>
     <section className="split-callout"><div className="callout-visual"><img src="/manus-storage/factory-error-hunt_8a64efc8.png" alt="Linha de produção com riscos para encontrar" /><span className="scan-line" /></div><div className="callout-copy"><div className="eyebrow">MISSÃO EM DESTAQUE</div><h2>Você enxerga o risco antes dele acontecer?</h2><p>Seis anomalias estão escondidas na fábrica. Encontre todas, ganhe pontos e ajude a construir uma cultura mais segura.</p><button className="secondary-button" onClick={() => startChallenge("errors")}>Jogar caça-erros <Search size={16} /></button></div></section>
     <section className="principles"><div className="principle-intro"><div className="eyebrow">O QUE MOVE A GENTE</div><h2>Uma fábrica melhor começa com você.</h2><p>Conteúdo rápido, decisões reais e feedback imediato para transformar conhecimento em atitude.</p></div><div className="principle-list"><div><span className="principle-icon cyan"><ShieldCheck size={20} /></span><span><strong>Segurança na fonte</strong><small>Identifique riscos e fortaleça barreiras.</small></span></div><div><span className="principle-icon yellow"><Zap size={20} /></span><span><strong>Melhoria contínua</strong><small>Pequenas ideias que liberam o fluxo.</small></span></div><div><span className="principle-icon green"><Leaf size={20} /></span><span><strong>Impacto positivo</strong><small>Menos desperdício. Mais futuro.</small></span></div></div></section>
@@ -470,9 +503,14 @@ function ProfilePage({ player, rank, go }: { player: Player; rank: number; go: (
   return <div className="page profile-page"><div className="profile-hero"><div className="profile-avatar">{player.name.slice(0, 1).toUpperCase()}</div><div><div className="eyebrow">PERFIL DO JOGADOR</div><h1>{player.name}</h1><p>{player.sector} <span>•</span> Nível {player.highestDifficulty}</p></div><button className="secondary-button" onClick={() => go("setup")}><Settings2 size={15} /> Editar perfil</button></div><div className="profile-highlight"><div><span>PONTUAÇÃO TOTAL</span><strong>{formatNumber(player.totalScore)}</strong><small><Trophy size={13} /> {rank <= 3 ? "Você está no pódio!" : `Posição #${rank} no ranking`}</small></div><div><span>PRECISÃO</span><strong>{accuracy}%</strong><div className="profile-progress"><i style={{ width: `${accuracy}%` }} /></div></div><div><span>MELHOR SEQUÊNCIA</span><strong>{player.bestStreak}</strong><small><Flame size={13} /> recorde pessoal</small></div></div><div className="stats-grid"><div className="stat-card"><span><Play size={17} /></span><small>PARTIDAS</small><strong>{player.games}</strong></div><div className="stat-card"><span><CheckCircle2 size={17} /></span><small>ACERTOS</small><strong>{player.correct}</strong></div><div className="stat-card"><span><X size={17} /></span><small>ERROS</small><strong>{player.errors}</strong></div><div className="stat-card"><span><Zap size={17} /></span><small>MELHOR PARTIDA</small><strong>{formatNumber(player.bestScore)}</strong></div></div><div className="profile-bottom"><section className="recent-card"><div className="eyebrow">DESEMPENHO</div><h2>Seu radar de melhoria</h2><div className="radar-placeholder"><div className="radar-shape"><span>SEGURANÇA</span><span>LEAN</span><span>5S</span><span>AMBIENTE</span><div /></div></div></section><section className="profile-badges"><div className="eyebrow">BADGES</div><h2>Suas conquistas</h2><div className="mini-badges">{badgeCatalog.slice(0, 6).map((badge) => <div key={badge.id} className={player.badges.includes(badge.id) ? "mini-badge active" : "mini-badge"}>{player.badges.includes(badge.id) ? badge.icon : <LockKeyhole size={15} />}</div>)}</div><button className="text-button" onClick={() => go("achievements")}>Ver todas <ArrowRight size={14} /></button></section></div></div>;
 }
 
-function AdminPage({ unlocked, password, setPassword, error, unlock, resetDemo, player, leaders }: { unlocked: boolean; password: string; setPassword: (value: string) => void; error: string; unlock: () => void; resetDemo: () => void; player: Player; leaders: Leader[] }) {
-  if (!unlocked) return <div className="page admin-gate"><div className="admin-gate-card"><span className="admin-lock"><LockKeyhole size={22} /></span><div className="eyebrow">ÁREA RESTRITA</div><h1>Painel <span>administrativo</span></h1><p>Gerencie o banco de perguntas, pontuações e indicadores da campanha.</p><label>Senha de acesso<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => event.key === "Enter" && unlock()} placeholder="Digite a senha" /></label>{error && <div className="form-error">{error}</div>}<button className="primary-button wide" onClick={unlock}>ACESSAR PAINEL <ArrowRight size={16} /></button><small className="demo-hint">Demonstração local • senha: CUMMINS2026</small></div></div>;
-  return <div className="page admin-page"><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot" /> CONTROLE DA CAMPANHA</div><h1>Painel <span>administrativo</span></h1><p>Visão rápida da operação do desafio SIPATMA.</p></div><div className="admin-live"><span className="pulse-dot" /> SISTEMA OPERACIONAL</div></div><div className="admin-stats"><div><Users size={18} /><span>JOGADORES</span><strong>{leaders.length}</strong><small>participantes no ranking</small></div><div><CircleHelp size={18} /><span>QUESTÕES ATIVAS</span><strong>{questionBank.length}</strong><small>foco em segurança e cuidado</small></div><div><Trophy size={18} /><span>PARTIDAS REGISTRADAS</span><strong>{player.games}</strong><small>neste dispositivo</small></div><div><BarChart3 size={18} /><span>SETOR LÍDER</span><strong>Produção</strong><small>por pontuação acumulada</small></div></div><div className="admin-panels"><section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">BANCO DE CONTEÚDO</div><h2>Gerenciar perguntas</h2></div><button className="secondary-button"><Sparkles size={15} /> Nova pergunta</button></div><div className="question-summary"><div><strong>Segurança e cuidado</strong><span>16 perguntas</span></div><div><strong>Prevenção de riscos</strong><span>Na trilha SIPATMA</span></div><div><strong>Atitudes responsáveis</strong><span>Na trilha SIPATMA</span></div><div><strong>Cultura de segurança</strong><span>Na trilha SIPATMA</span></div></div><div className="admin-list"><div><span className="list-icon cyan"><ShieldCheck size={16} /></span><div><strong>Como agir ao encontrar um risco?</strong><small>Segurança • Médio • 200 pts</small></div><button><Settings2 size={15} /></button></div><div><span className="list-icon yellow"><BarChart3 size={16} /></span><div><strong>Qual atitude demonstra cuidado com um colega?</strong><small>Segurança • Fácil • 100 pts</small></div><button><Settings2 size={15} /></button></div></div></section><section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">MANUTENÇÃO</div><h2>Ações do sistema</h2></div><Settings2 size={20} /></div><div className="admin-actions"><button><LayoutDashboard size={16} /><span>Visualizar estatísticas<small>Indicadores por desafio e setor</small></span><ChevronRight size={15} /></button><button><Trophy size={16} /><span>Exportar ranking<small>Gerar relatório da campanha</small></span><ChevronRight size={15} /></button><button className="danger-action" onClick={resetDemo}><RotateCcw size={16} /><span>Resetar ranking de demonstração<small>Limpa os dados deste dispositivo</small></span><ChevronRight size={15} /></button></div></section></div></div>;
+function AdminPage({ resetDemo, player, leaders, user, authLoading, isAuthenticated }: { resetDemo: () => void; player: Player; leaders: Leader[]; user: { name: string | null; role: "admin" | "user" } | null; authLoading: boolean; isAuthenticated: boolean }) {
+  const isAdmin = user?.role === "admin";
+  const dashboard = trpc.analytics.dashboard.useQuery(undefined, { enabled: isAdmin });
+  if (authLoading) return <div className="page admin-gate"><div className="admin-gate-card"><span className="admin-lock"><LockKeyhole size={22} /></span><div className="eyebrow">VALIDANDO ACESSO</div><h1>Carregando <span>painel.</span></h1><p>Estamos verificando sua conta administrativa com segurança.</p></div></div>;
+  if (!isAuthenticated) return <div className="page admin-gate"><div className="admin-gate-card"><span className="admin-lock"><LockKeyhole size={22} /></span><div className="eyebrow">ÁREA RESTRITA</div><h1>Entrar no <span>painel.</span></h1><p>Faça login com sua conta Cummins/Manus para acessar pessoas, respostas, pontuação e desempenho.</p><button className="primary-button wide" onClick={() => startLogin()}>ENTRAR COM MINHA CONTA <ArrowRight size={16} /></button><small className="demo-hint">Somente administradores autorizados têm acesso aos dados.</small></div></div>;
+  if (!isAdmin) return <div className="page admin-gate"><div className="admin-gate-card"><span className="admin-lock"><LockKeyhole size={22} /></span><div className="eyebrow">ACESSO NEGADO</div><h1>Permissão <span>necessária.</span></h1><p>Sua conta está autenticada, mas não possui a permissão administrativa para visualizar os dados da campanha.</p></div></div>;
+  const totals = dashboard.data?.totals;
+  return <div className="page admin-page"><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot" /> DADOS REAIS DA CAMPANHA</div><h1>Painel <span>administrativo</span></h1><p>Olá, {user.name || "administrador"}. Acompanhe acessos, respostas, precisão e pontuação.</p></div><div className="admin-live"><span className="pulse-dot" /> BANCO CONECTADO</div></div><div className="admin-stats"><div><Users size={18} /><span>VISITANTES ÚNICOS</span><strong>{formatNumber(Number(totals?.uniqueVisitors || 0))}</strong><small>{formatNumber(Number(totals?.visits || 0))} acessos registrados</small></div><div><Play size={18} /><span>PARTICIPAÇÕES</span><strong>{formatNumber(Number(totals?.sessions || 0))}</strong><small>{formatNumber(Number(totals?.completedSessions || 0))} partidas concluídas</small></div><div><CheckCircle2 size={18} /><span>PRECISÃO MÉDIA</span><strong>{Math.round(Number(totals?.averageAccuracy || 0))}%</strong><small>{formatNumber(Number(totals?.correctAnswers || 0))} respostas corretas</small></div><div><Trophy size={18} /><span>PONTOS ACUMULADOS</span><strong>{formatNumber(Number(totals?.totalPoints || 0))}</strong><small>{formatNumber(Number(totals?.answers || 0))} alternativas respondidas</small></div></div><div className="admin-panels"><section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">PARTICIPAÇÕES RECENTES</div><h2>Quem jogou</h2></div><span className="participant-count">{dashboard.isLoading ? "Atualizando…" : "Dados persistentes"}</span></div><div className="admin-list">{dashboard.data?.recentSessions?.length ? dashboard.data.recentSessions.slice(0, 8).map((session) => <div key={session.sessionKey}><span className="list-icon cyan"><ShieldCheck size={16} /></span><div><strong>{session.playerName} <small>• {session.sector}</small></strong><small>{session.challenge} • {session.status === "completed" ? "Concluída" : "Em andamento"} • {session.accuracy}% de acerto</small></div><b>{formatNumber(session.score)} pts</b></div>) : <div className="admin-empty"><CircleHelp size={18} /><span>Nenhuma participação registrada ainda. Os dados aparecerão aqui quando alguém iniciar uma missão.</span></div>}</div></section><section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">DESEMPENHO POR SETOR</div><h2>Onde está a participação</h2></div><BarChart3 size={20} /></div><div className="sector-bars admin-sector-bars">{dashboard.data?.sectors?.length ? dashboard.data.sectors.map((sector, index) => <div key={sector.sector}><div><span>{sector.sector}</span><strong>{formatNumber(Number(sector.points))} pts</strong></div><div className="bar-track"><i style={{ width: `${Math.max(12, (Number(sector.points) / Math.max(1, Number(dashboard.data?.sectors?.[0]?.points || 1))) * 100)}%`, background: index === 0 ? accent.yellow : accent.cyan }} /></div><small>{sector.players} pessoas • {Math.round(Number(sector.accuracy))}% de precisão</small></div>) : <div className="admin-empty"><BarChart3 size={18} /><span>O ranking por setor será formado conforme as participações forem registradas.</span></div>}</div><div className="admin-actions"><button onClick={() => dashboard.refetch()}><RotateCcw size={16} /><span>Atualizar dados<small>Buscar os números mais recentes</small></span><ChevronRight size={15} /></button><button className="danger-action" onClick={resetDemo}><RotateCcw size={16} /><span>Resetar placar local<small>Limpa apenas o ranking deste navegador</small></span><ChevronRight size={15} /></button></div></section></div><section className="admin-panel admin-privacy-note"><ShieldCheck size={18} /><div><strong>Dados protegidos</strong><span>O painel está restrito a usuários com role administrativo. O jogo público registra apenas o apelido, setor, respostas e métricas necessárias para a campanha.</span></div></section></div>;
 }
 
 export default App;

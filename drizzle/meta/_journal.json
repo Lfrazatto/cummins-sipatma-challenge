@@ -8,6 +8,13 @@
       "when": 1788455555627,
       "tag": "0000_dizzy_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1788885829780,
+      "tag": "0001_jittery_wasp",
+      "breakpoints": true
     }
   ]
 }

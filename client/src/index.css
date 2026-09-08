@@ -95,3 +95,35 @@ p { color: var(--muted); line-height: 1.6; }
   .brand strong { font-size: 13px; }
   .brand em { font-size: 8px; }
 }
+
+/* Cummins-inspired brand layer: official red accent paired with the existing safety cyan. */
+:root { --cummins-red: #da291c; }
+.brand-mark { border-color: var(--cummins-red); color: var(--cummins-red); box-shadow: 0 0 18px rgba(218,41,28,.12); }
+.brand em { color: var(--cummins-red); }
+.admin-live { color: var(--green); border-color: rgba(104,211,145,.35); }
+.admin-empty { min-height: 125px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.admin-list > div > b { margin-left: auto; color: var(--yellow); font: 600 14px 'Barlow Condensed'; white-space: nowrap; }
+.admin-sector-bars { margin: 0; }
+.admin-sector-bars > div { margin-bottom: 17px; }
+.admin-sector-bars small { color: var(--muted); font-size: 10px; display: block; margin-top: 5px; }
+.admin-privacy-note { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; color: var(--cyan); }
+.admin-privacy-note strong, .admin-privacy-note span { display: block; }
+.admin-privacy-note strong { font: 600 17px 'Barlow Condensed'; color: #f2f8fb; }
+.admin-privacy-note span { color: var(--muted); font-size: 11px; line-height: 1.55; margin-top: 4px; }
+@media (max-width: 720px) {
+  .admin-list > div > b { font-size: 11px; }
+  .admin-privacy-note { padding: 15px; }
+}
+
+.osasco-feature { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 34px; align-items: stretch; margin: 54px 0 0; padding: 18px; border: 1px solid rgba(218,41,28,.35); background: linear-gradient(110deg, rgba(218,41,28,.08), rgba(9,27,39,.72)); }
+.osasco-photo { min-height: 260px; position: relative; overflow: hidden; border: 1px solid rgba(242,248,251,.12); }
+.osasco-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,15,24,.1), rgba(4,15,24,.45)); pointer-events: none; }
+.osasco-photo img { width: 100%; height: 100%; min-height: 260px; object-fit: cover; display: block; filter: saturate(.92) contrast(1.05); }
+.osasco-photo span { position: absolute; z-index: 1; left: 16px; bottom: 14px; color: #fff; font: 600 12px 'Barlow Condensed'; letter-spacing: .17em; padding: 7px 10px; background: var(--cummins-red); }
+.osasco-copy { display: flex; flex-direction: column; justify-content: center; padding: 14px 20px 14px 0; }
+.osasco-copy h2 { max-width: 360px; margin: 10px 0 14px; font: 500 clamp(30px, 3.5vw, 47px)/.98 'Barlow Condensed'; color: #f2f8fb; }
+.osasco-copy h2 span { color: var(--cummins-red); }
+.osasco-copy p { max-width: 410px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.osasco-copy small { margin-top: 20px; color: #728898; font-size: 10px; line-height: 1.55; }
+.osasco-copy a { color: var(--cyan); }
+@media (max-width: 720px) { .osasco-feature { grid-template-columns: 1fr; gap: 20px; margin-top: 34px; padding: 12px; } .osasco-photo, .osasco-photo img { min-height: 185px; } .osasco-copy { padding: 0 8px 10px; } }

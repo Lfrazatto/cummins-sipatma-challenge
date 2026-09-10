@@ -27,3 +27,11 @@ Fixed the public leaderboard query. The previous implementation ordered by the s
 ## 2026-09-08 timer update
 
 Doubled the available challenge time: Fácil 120 seconds, Médio 90 seconds, Difícil 60 seconds. This applies to quiz and timed visual missions through the shared `difficultyMeta` configuration; points and completion logic remain unchanged.
+
+## 2026-09-08 gameplay expansion
+
+Expanded the SIPATMA question bank from 16 to 40 questions, focused on safety, care, prevention, emergency response, energy isolation, material handling, environmental responsibility and factory routines. Each new round shuffles both question order and answer options, preserving the correct answer index after shuffling.
+
+Scoring now decays with elapsed round time: the base difficulty score is multiplied from 100% down to a 25% floor as the player uses the available time, with streak bonuses preserved. The awarded amount is shown in feedback and recorded in the database. The visual error hunt also uses the time-adjusted points and persists each discovered anomaly as an answer event.
+
+The error hunt no longer displays visible target markers or names before discovery. It uses generic “Anomalia” slots and reveals the specific finding only after the player clicks a location in the industrial scene. The scene includes plausible factory hazards such as incomplete PPE, spill, blocked passage, poor storage, mixed waste and misplaced tools.

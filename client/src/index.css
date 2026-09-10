@@ -127,3 +127,8 @@ p { color: var(--muted); line-height: 1.6; }
 .osasco-copy small { margin-top: 20px; color: #728898; font-size: 10px; line-height: 1.55; }
 .osasco-copy a { color: var(--cyan); }
 @media (max-width: 720px) { .osasco-feature { grid-template-columns: 1fr; gap: 20px; margin-top: 34px; padding: 12px; } .osasco-photo, .osasco-photo img { min-height: 185px; } .osasco-copy { padding: 0 8px 10px; } }
+
+/* The visual hunt should test observation, not reveal the answer locations. */
+.factory-board .hotspot { border: 0; background: transparent; }
+.factory-board .hotspot span { display: none; }
+.factory-board .hotspot:hover { background: rgba(24,199,238,.12); }

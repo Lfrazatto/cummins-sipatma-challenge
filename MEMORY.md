@@ -41,3 +41,7 @@ The error hunt no longer displays visible target markers or names before discove
 Expanded the bank to 70 questions total: 20+ safety questions, 20 environmental responsibility questions, and 20+ 5S questions, with the visible mission labels synchronized to 44 safety/environment questions and 20 questions for 5S and environment missions. Theme missions now stay within the selected category even when the chosen difficulty has fewer than eight items.
 
 The error hunt now has functional scene interaction: transparent clickable target regions, a click on empty scene space counts as a wrong attempt and deducts 25 points, discovered risks reveal their real label and explanation only after selection, and each successful discovery is persisted as an answer event. The underlying factory scene uses plausible hazards rather than decorative answer markers.
+
+## 2026-09-10 preference correction
+
+The active bank was normalized to exactly 60 questions: 20 Segurança, 20 Meio ambiente, and 20 5S. The earlier extra safety and 5S items were removed so the visible theme counts and source counts match exactly. The interface was converted from dark to light with high-contrast text, white cards, pale gray background, Cummins red accents, safety cyan highlights, and the Cummins visual identity preserved.

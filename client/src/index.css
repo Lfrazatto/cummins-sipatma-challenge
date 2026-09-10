@@ -132,3 +132,32 @@ p { color: var(--muted); line-height: 1.6; }
 .factory-board .hotspot { border: 0; background: transparent; }
 .factory-board .hotspot span { display: none; }
 .factory-board .hotspot:hover { background: rgba(24,199,238,.12); }
+
+/* Claro por preferência do usuário: superfície limpa, contraste alto e acentos Cummins. */
+:root { color: #172a35; background: #f4f7f8; --ink: #172a35; --panel: #ffffff; --panel-2: #edf3f5; --line: rgba(23, 52, 66, .16); --muted: #536b77; }
+html, body { background: #f4f7f8; color: #172a35; }
+.app-shell { background: radial-gradient(circle at 82% 5%, rgba(24,199,238,.10), transparent 28%), #f4f7f8; }
+.app-shell:before { opacity: .4; background-image: linear-gradient(rgba(74,111,126,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(74,111,126,.08) 1px, transparent 1px); }
+.topbar { background: rgba(255,255,255,.9); border-bottom-color: rgba(23,52,66,.14); }
+.brand { color: #172a35; }
+.desktop-nav button, .mobile-nav button { color: #536b77; }
+.desktop-nav button:hover, .desktop-nav button.active, .mobile-nav button:hover { color: #172a35; }
+h1, h2, h3, strong { color: #172a35; }
+p { color: #536b77; }
+.challenge-card { color: #172a35; background: rgba(255,255,255,.86); box-shadow: 0 8px 26px rgba(23,52,66,.06); }
+.challenge-card:hover { background: #fff; }
+.visual-frame { background: #dce9ed; box-shadow: 0 23px 70px rgba(23,52,66,.14); }
+.visual-frame:after { background: linear-gradient(90deg, rgba(5,20,30,.22), transparent 45%), linear-gradient(0deg, rgba(7,19,30,.2), transparent 38%); }
+.visual-tag { background: rgba(12,31,43,.86); }
+.secondary-button { color: #0e4a5a; background: rgba(24,199,238,.07); }
+.setup-card, .quiz-card, .table-card, .sector-card, .recent-card, .profile-badges, .admin-panel { background: rgba(255,255,255,.9); box-shadow: 0 8px 26px rgba(23,52,66,.05); }
+.setup-card input, .setup-card select, .admin-gate-card input { background: #f6fafb; color: #172a35; border-color: rgba(23,52,66,.24); }
+.setup-card input::placeholder, .admin-gate-card input::placeholder { color: #78909b; }
+.difficulty-options button { background: #f6fafb; color: #38515e; }
+.quiz-side-note, .found-item, .selected-card-note { color: #536b77; }
+.quiz-card h2, .quiz-card strong, .result-title h2, .kanban-banner h2, .callout-copy h2, .concept-detail h2, .profile-hero h1, .admin-title { color: #172a35; }
+.challenge-meta strong, .principle-list strong, .podium-card strong, .found-item strong { color: #172a35; }
+.error-instruction, .kanban-help, .learn-nav, .admin-gate-card { background: rgba(255,255,255,.8); }
+.mobile-nav { background: #fff; border-color: var(--line); box-shadow: 0 12px 28px rgba(23,52,66,.14); }
+.footer { color: #6d8590; }
+.footer button { color: #4e7684; }

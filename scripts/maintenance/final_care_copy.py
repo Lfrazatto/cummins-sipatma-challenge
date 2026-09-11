@@ -1,0 +1,12 @@
+from pathlib import Path
+p=Path('/home/ubuntu/cummins-sipatma-challenge/client/src/App.tsx')
+s=p.read_text()
+s=s.replace('questionIndex >= gameQuestions.length - 1', 'questionIndex >= gameQuestions.length - 1')
+s=s.replace('{index >= 7 ? "VER RESULTADO" : "PRÓXIMA QUESTÃO"}', '{index >= 14 ? "VER RESULTADO" : "PRÓXIMA QUESTÃO"}')
+s=s.replace('gameQuestions.length || 8', 'gameQuestions.length || 15')
+s=s.replace('Quem está colocando a melhoria em movimento?', 'Quem está demonstrando mais cuidado?')
+s=s.replace('Cada badge representa uma atitude que move a melhoria.', 'Cada badge representa uma atitude de cuidado e prevenção.')
+s=s.replace('Um ambiente ordenado ajuda a perceber riscos, mas não substitui controles técnicos e procedimentos.', 'Um posto cuidado ajuda a perceber riscos, sem substituir controles técnicos e procedimentos.')
+s=s.replace('Você transforma conhecimento em uma atitude segura.', 'Você transforma conhecimento em cuidado na rotina.')
+s=s.replace('Pequenas ideias que liberam o fluxo.', 'Pequenas atitudes que protegem as pessoas.')
+p.write_text(s)

@@ -182,3 +182,11 @@ export async function getPublicLeaderboard() {
     level: sql<string>`max(${gameSessions.difficulty})`,
   }).from(gameSessions).where(eq(gameSessions.status, "completed")).groupBy(gameSessions.playerName, gameSessions.sector).orderBy(desc(sql<number>`coalesce(sum(${gameSessions.score}), 0)`)).limit(50);
 }
+
+export async function clearGameRankings() {
+  const db = await getDb();
+  if (!db) return { deletedAnswers: 0, deletedSessions: 0 };
+  const answerResult = await db.delete(gameAnswers);
+  const sessionResult = await db.delete(gameSessions);
+  return { deletedAnswers: Number(answerResult[0]?.affectedRows ?? 0), deletedSessions: Number(sessionResult[0]?.affectedRows ?? 0) };
+}

@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
-import { completeGameSession, createGameSession, getAnalyticsDashboard, getPublicAnalyticsStats, getPublicLeaderboard, recordGameAnswer, recordGameVisit } from "./db";
+import { clearGameRankings, completeGameSession, createGameSession, getAnalyticsDashboard, getPublicAnalyticsStats, getPublicLeaderboard, recordGameAnswer, recordGameVisit } from "./db";
 
 const difficulty = z.enum(["Fácil", "Médio", "Difícil"]);
 
@@ -25,6 +25,7 @@ export const appRouter = router({
     publicStats: publicProcedure.query(() => getPublicAnalyticsStats()),
     publicLeaderboard: publicProcedure.query(() => getPublicLeaderboard()),
     dashboard: adminProcedure.query(() => getAnalyticsDashboard()),
+    clearRankings: adminProcedure.mutation(() => clearGameRankings()),
   }),
 });
 

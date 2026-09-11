@@ -1,24 +1,23 @@
-# Cummins SIPATMA Challenge — Plan
+# Cummins SIPATMA Challenge — Plano atual
 
-## Product slice
+## Direção do produto
 
-A polished, responsive corporate game hub for SIPATMA, safety, environment and Lean Manufacturing. The first implementation prioritizes a high-quality playable client experience with local persistence so the flow can be demonstrated end to end without requiring an external login.
+Uma experiência clara, rápida e acessível para operadores de fábrica aprenderem sobre **cuidado, prevenção, atenção e responsabilidade**. O produto não usa Lean, Kaizen, Kanban ou 5S como temas para o participante.
 
-## Risk slices
+## Desafios
 
-1. **Game state transitions:** quiz answer feedback, lives, streaks, timer, results and replay.
-2. **Visual challenge:** clickable factory hotspots mapped to six safety and Lean anomalies.
-3. **Kanban interaction:** card selection, WIP-aware board movement and completion state.
-4. **Responsive shell:** desktop navigation, mobile navigation and compact game layouts.
-5. **Persistence:** localStorage player profile and rankings, admin demo reset.
+1. **Quiz de Segurança:** exatamente 15 perguntas exclusivas, com múltipla escolha e verdadeiro/falso.
+2. **Cuide do ambiente:** exatamente 15 perguntas exclusivas, com múltipla escolha e verdadeiro/falso.
+3. **Ache o erro:** jogo visual com seis riscos industriais reais e penalidade por tentativa fora do risco.
+4. **Organize e cuide:** jogo visual de organização do posto, com três cuidados para concluir.
 
-## Verification criteria
+## Administração
 
-- Player can identify with nickname, sector and difficulty.
-- Home screen visibly communicates the product, mission cards and industrial art direction.
-- Quiz has immediate correctness feedback and scoring.
-- Caça-erros uses the generated factory image and clickable hotspots.
-- Kanban board supports moving cards and completing a mini mission.
-- Ranking shows podium, table, sector champion and current player highlight.
-- Learn, achievements, profile and admin gate are reachable and responsive.
-- `pnpm check` passes and preview screenshots show no runtime or layout errors.
+O administrador autenticado visualiza acessos, participantes, vencedores, respostas, acertos, erros, precisão, pontos e setores. Pode atualizar dados, resetar o ranking local e apagar o ranking real persistido com confirmação.
+
+## Verificação
+
+- Tema claro e identidade Cummins preservados.
+- Exatamente 15 perguntas por cada quiz, sem repetição entre Segurança e Ambiente.
+- Jogos visuais separados e jogáveis.
+- `pnpm check`, `pnpm test` e `pnpm build` aprovados.

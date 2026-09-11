@@ -45,3 +45,11 @@ The error hunt now has functional scene interaction: transparent clickable targe
 ## 2026-09-10 preference correction
 
 The active bank was normalized to exactly 60 questions: 20 Segurança, 20 Meio ambiente, and 20 5S. The earlier extra safety and 5S items were removed so the visible theme counts and source counts match exactly. The interface was converted from dark to light with high-contrast text, white cards, pale gray background, Cummins red accents, safety cyan highlights, and the Cummins visual identity preserved.
+
+## 2026-09-11 care-first refactor
+
+Reframed the experience around SIPATMA as a care and prevention movement for factory operators. Removed participant-facing Lean, Kaizen, Kanban and 5S themes. The active content bank is now exactly 30 questions: 15 unique Safety questions and 15 unique Environment questions, mixing multiple choice and true/false. The two visual games are presented as “Ache o erro” and “Organize e cuide”.
+
+The home is a clear Cummins-branded interface with four focused cards, short descriptions, accessible labels and no operational-method jargon. The admin area remains protected by role and now has a real `analytics.clearRankings` mutation that deletes persisted game answers and sessions after explicit confirmation, in addition to showing participation, accuracy, scores, sectors and recent winners/players.
+
+Code navigation was documented in `client/src/content`, `client/src/games`, `client/src/admin`, and maintenance scripts were moved under `scripts/maintenance`.
